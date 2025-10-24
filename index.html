@@ -53,8 +53,7 @@
 </head>
 <body class="bg-neutral-50 text-neutral-800">
 
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
 <script>
     
     // 이전 Firebase 초기화 코드는 완전히 제거하거나 주석 처리합니다.
@@ -63,7 +62,7 @@
     const SUPABASE_URL = 'https://xtcoovvghttnwxwdttqa.supabase.co'; 
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0Y29vdnZnaHR0bnd4d2R0dHFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzMDE3NzYsImV4cCI6MjA3Njg3Nzc3Nn0.Fmn9b1FoyklF5jw0oiLKp4JT1zRTY9iq9hiCog6HHpE'; 
 
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    var supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     
     console.log('Supabase 클라이언트가 초기화되었습니다.', supabase);
 </script>
@@ -531,7 +530,28 @@
                 const submitted = {};        
 
                 // ... (채점 로직은 그대로 유지)
-                for (const q in answers) { /* ... 채점 로직 ... */ }
+                for (const q in answers) {
+                        const questionDiv = document.getElementById(q);
+                        questionDiv.classList.remove('correct', 'incorrect');
+                        const selected = document.querySelector(`input[name="${q}"]:checked`);
+                        
+                        let isCorrect = false;
+
+                        // 🎯 제출된 답안을 'submitted' 객체에 저장 (A1, A2, A3에 대응될 값)
+                        submitted[q] = selected ? selected.value : null; 
+
+                        if (selected && selected.value === answers[q]) {
+                            score++;
+                            isCorrect = true;
+                            questionDiv.classList.add('correct');
+                        } else {
+                            questionDiv.classList.add('incorrect');
+                        }
+                        
+                        // 문제별 정답 여부를 'correctness' 객체에 저장
+                        correctness[q] = isCorrect;
+                    }
+
                 
                 const resultsDiv = document.getElementById('quizResults'); 
                 
