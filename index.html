@@ -52,6 +52,25 @@
 </head>
 <body class="bg-neutral-50 text-neutral-800">
 
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script>
+    
+        // 2. [⭐필수⭐] Firebase 콘솔에서 복사한 실제 설정 정보로 대체해야 합니다.
+        const firebaseConfig = {
+            apiKey: "AIzaSyASDJulH_VLREZGiZB0b_E3MO5dV11KOXI",
+    authDomain: "metal-zodiac-471900-m1.firebaseapp.com",
+    projectId: "metal-zodiac-471900-m1",
+    storageBucket: "metal-zodiac-471900-m1.firebasestorage.app",
+    messagingSenderId: "1028434025451",
+    appId: "1:1028434025451:web:212df51dc4446f468fd7ae",
+    measurementId: "G-9WSVS65B7G"
+        };
+// 3. Firebase 및 Firestore 초기화
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+</script>
+
     <header class="bg-white shadow-sm sticky top-0 z-50">
         <nav class="container mx-auto max-w-6xl px-4">
             <div class="flex justify-between items-center h-16">
@@ -324,6 +343,23 @@
             <p class="text-center text-lg text-neutral-600 mb-6">학습한 내용을 바탕으로 간단한 퀴즈를 풀어보세요.</p>
             <div class="bg-white p-8 rounded-lg shadow-md max-w-3xl mx-auto">
                 <form id="quizForm">
+	<div class="mb-6 p-4 border rounded-lg bg-neutral-50">
+                <p class="font-semibold text-lg mb-3 text-blue-700">정보 입력</p>
+                <div class="space-y-3">
+                    <div>
+                        <label for="corpInput" class="block text-sm font-medium text-neutral-700 mb-1">법인 (예: NVH KOREA)</label>
+                        <input type="text" id="corpInput" name="corp" required 
+                               class="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                               placeholder="필수 입력">
+                    </div>
+                    <div>
+                        <label for="employeeIdInput" class="block text-sm font-medium text-neutral-700 mb-1">사번</label>
+                        <input type="text" id="employeeIdInput" name="employeeId" required
+                               class="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                               placeholder="필수 입력">
+                    </div>
+                </div>
+            </div>
                     <div id="q1" class="quiz-question mb-6 p-4 border rounded-lg">
                         <p class="font-semibold text-lg mb-3">Q1. 출처가 불분명하고 '긴급 송장'이라는 제목의 이메일을 받았습니다. 올바른 행동은?</p>
                         <div class="space-y-2">
@@ -467,10 +503,14 @@
                 });
             });
 
+	const corpInput = document.getElementById('corpInput');
+            const employeeIdInput = document.getElementById('employeeIdInput');
+
             const quizForm = document.getElementById('quizForm');
             if (quizForm) {
                 quizForm.addEventListener('submit', function(e) {
                     e.preventDefault();
+                    
                     const answers = {
                         q1: 'c',
                         q2: 'c',
@@ -479,28 +519,77 @@
                     let score = 0;
                     const totalQuestions = Object.keys(answers).length;
 
+                    const correctness = {};      // 문제별 정답 여부 (C1, C2, C3에 대응)
+                    const submitted = {};        // 🎯 제출된 답안 (A1, A2, A3에 대응될 변수)
+
                     for (const q in answers) {
                         const questionDiv = document.getElementById(q);
                         questionDiv.classList.remove('correct', 'incorrect');
                         const selected = document.querySelector(`input[name="${q}"]:checked`);
                         
+                        let isCorrect = false;
+
+                        // 🎯 제출된 답안을 'submitted' 객체에 저장 (A1, A2, A3에 대응될 값)
+                        submitted[q] = selected ? selected.value : null; 
+
                         if (selected && selected.value === answers[q]) {
                             score++;
+                            isCorrect = true;
                             questionDiv.classList.add('correct');
                         } else {
                             questionDiv.classList.add('incorrect');
                         }
+                        
+                        // 문제별 정답 여부를 'correctness' 객체에 저장
+                        correctness[q] = isCorrect;
                     }
 
-                    const resultsDiv = document.getElementById('quizResults');
-                    resultsDiv.textContent = `결과: ${totalQuestions}문제 중 ${score}문제 정답입니다!`;
-                    if(score === totalQuestions) {
-                        resultsDiv.textContent += " 완벽합니다! 👏";
-                        resultsDiv.style.color = 'green';
-                    } else {
-                        resultsDiv.textContent += " 틀린 문제를 다시 확인해 보세요.";
-                        resultsDiv.style.color = 'red';
-                    }
+                    const resultsDiv = document.getElementById('quizResults'); 
+                    
+                    // 🎯 Firestore에 저장할 데이터 객체 구성 (오류 수정 및 필드 재구성)
+                    const resultData = {
+                        // 사용자 입력 정보
+                        corp: corpInput.value,           
+                        employeeId: employeeIdInput.value, 
+
+                        // 퀴즈 결과 정보
+                        score: score,
+                        total: totalQuestions,
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                        
+                        // 🎯 C1, C2, C3 필드 (correctness 객체의 값 직접 참조)
+                        C1: correctness.q1, 
+                        C2: correctness.q2,
+                        C3: correctness.q3,
+                        
+                        // 🎯 A1, A2, A3 필드 (submitted 객체의 값 직접 참조)
+                        A1: submitted.q1,
+                        A2: submitted.q2,
+                        A3: submitted.q3,
+
+                        // 상세 분석용 객체 (선택적)
+                        correctness_detail: correctness,
+                        answers_submitted_detail: submitted, 
+                    };
+
+                    // Firestore에 데이터 저장 실행
+                    db.collection("exam_result_his").add(resultData)
+                        .then(() => {
+                            // 저장 성공 시 결과 표시
+                            resultsDiv.textContent = `결과: ${totalQuestions}문제 중 ${score}문제 정답입니다! (결과 저장 완료 ✅)`;
+                            resultsDiv.style.color = (score === totalQuestions) ? 'green' : 'red';
+                            if(score === totalQuestions) {
+                                resultsDiv.textContent += " 완벽합니다! 👏";
+                            } else {
+                                resultsDiv.textContent += " 틀린 문제를 다시 확인해 보세요.";
+                            }
+                        })
+                        .catch((error) => {
+                            // 저장 실패 시 오류 메시지 표시
+                            console.error("Firestore 저장 실패: ", error);
+                            resultsDiv.textContent = `결과 확인 실패: 데이터베이스 연결 또는 보안 규칙 오류 발생! (${error.message})`;
+                            resultsDiv.style.color = 'red'; 
+                        });
                 });
             }
         });
