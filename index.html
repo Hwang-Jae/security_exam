@@ -68,7 +68,7 @@
         };
 // 3. Firebase 및 Firestore 초기화
         firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
+        const db = firebase.firestore("gcpdb-1");
 </script>
 
     <header class="bg-white shadow-sm sticky top-0 z-50">
@@ -574,6 +574,7 @@
 
                     // Firestore에 데이터 저장 실행
                     db.collection("exam_result_his").add(resultData)
+			//db.collection("exam_result_his").doc("R_QUIZ_HIS").set(resultData)
                         .then(() => {
                             // 저장 성공 시 결과 표시
                             resultsDiv.textContent = `결과: ${totalQuestions}문제 중 ${score}문제 정답입니다! (결과 저장 완료 ✅)`;
